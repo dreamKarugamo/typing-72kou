@@ -1,15 +1,16 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { seasonalData } from './data';
-import type { MainData } from './types';
-import './App.css';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { seasonalData } from "./data";
+import type { MainData } from "./types";
+import "./App.css";
 
 export default function App() {
-    const [state, setState] = useState<'start' | 'playing' | 'result'>('start');
+    const [state, setState] = useState<"start" | "playing" | "result">("start");
     const [questions, setQuestions] = useState<MainData[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [inputIndex, setInputIndex] = useState(0);
     const [missCount, setMissCount] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
+    const [totalKeysPressed, setTotalKeysPressed] = useState(0);
     const [timeLeft, setTimeLeft] = useState(60);
     const [playedHistory, setPlayedHistory] = useState<MainData[]>([]);
 
@@ -37,25 +38,26 @@ export default function App() {
         const shuffled = [...seasonalData];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         setQuestions(shuffled);
         setCurrentIndex(0);
         setInputIndex(0);
         setMissCount(0);
         setCorrectCount(0);
+        setTotalKeysPressed(0);
         setTimeLeft(60);
         setPlayedHistory([shuffled[0]]);
-        setState('playing');
+        setState("playing");
     };
 
     useEffect(() => {
-        if (state === 'playing') {
+        if (state === "playing") {
             timerRef.current = window.setInterval(() => {
                 setTimeLeft((p) => {
                     if (p <= 1) {
                         clearTimer();
-                        setState('result');
+                        setState("result");
                         return 0;
                     }
                     return p - 1;
@@ -76,7 +78,6 @@ export default function App() {
             let isCorrect = false;
             let advance = 1;
 
-            // 入力揺れ吸収 (tsu/tu, shi/si等)
             if (e.key === target) isCorrect = true;
             else if (
                 target === "h" &&
@@ -108,6 +109,8 @@ export default function App() {
 
             if (isCorrect) {
                 setCorrectCount((c) => c + 1);
+                setTotalKeysPressed((t) => t + advance);
+
                 const nextIdx = inputIndex + advance;
                 if (nextIdx < typingStr.length) {
                     setInputIndex(nextIdx);
@@ -133,7 +136,11 @@ export default function App() {
         return (
             <div className="ts-container">
                 <div className="ts-card">
-                    <h1 className="ts-title">七十二候<br />タイピング</h1>
+                    <h1 className="ts-title">
+                        七十二候
+                        <br />
+                        タイピング
+                    </h1>
                     <p className="ts-subtitle">六十秒の刹那、四季を綴る</p>
                     <button className="ts-button" onClick={startGame}>
                         スタート
@@ -153,10 +160,12 @@ export default function App() {
                 <div className="ts-card">
                     <div className="ts-kanjiWord">{q.word}</div>
                     <div className="ts-yomi">{q.reading}</div>
+
+                    {/* ★ インラインの style を削除し、元通りのクラス指定に戻します */}
                     <div className="ts-typingDisplayWrapper">
                         <div
                             className="ts-typingDisplayInner"
-                            style={{ transform: `translateX(${offsetX}px)` }}
+                            style={{ transform: `translateX(${offsetX}px)` }} // 移動用のtransformだけ残す
                         >
                             <span ref={typedRef} className="ts-typed">
                                 {q.typing.substring(0, inputIndex)}
@@ -175,29 +184,52 @@ export default function App() {
     }
 
     if (state === "result") {
+        const playedSeconds = 60 - timeLeft;
+
+        const calculatedWPM =
+            playedSeconds > 0
+                ? Math.floor((totalKeysPressed / playedSeconds) * 60)
+                : 0;
+
+        const accuracy =
+            correctCount + missCount > 0
+                ? Math.floor((correctCount / (correctCount + missCount)) * 100)
+                : 0;
+
         return (
             <div className="ts-container">
                 <div className="ts-card">
                     <h2 className="ts-title">鑑定結果</h2>
-                        <div className="ts-resultStats">
-                            <div className="ts-statItem">
-                                <span className="ts-statLabel">WPM</span>
+
+                    <div className="ts-resultStats">
+                        <div className="ts-statItem">
+                            <span className="ts-statLabel">
+                                WPM (打鍵数/分)
+                            </span>
                             <span className="ts-statValue">
-                                {Math.floor(correctCount / 5)}
+                                {calculatedWPM}
                             </span>
                         </div>
                         <div className="ts-statItem">
                             <span className="ts-statLabel">正確性</span>
-                            <span className="ts-statValue">
-                                {correctCount + missCount > 0
-                                    ? Math.floor(
-                                        (correctCount /
-                                              (correctCount + missCount)) * 100
-                                    ): 0}
-                                %
-                            </span>
+                            <span className="ts-statValue">{accuracy}%</span>
                         </div>
                     </div>
+
+                    <div
+                        style={{
+                            fontSize: "0.85rem",
+                            color: "var(--color-text-sub)",
+                            textAlign: "center",
+                            margin: "15px 0",
+                        }}
+                    >
+                        <span>正答キー: {totalKeysPressed}回</span>
+                        <span style={{ marginLeft: "15px" }}>
+                            ミスキー: {missCount}回
+                        </span>
+                    </div>
+
                     <div className="ts-resultListContainer">
                         <div className="ts-resultList">
                             <p
