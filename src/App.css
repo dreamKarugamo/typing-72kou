@@ -1,0 +1,206 @@
+:root {
+    --color-bg: #1a1a1a;
+    --color-text-main: #f0f0f0;
+    --color-text-sub: #a0a0a0;
+    --color-accent: #d4b87c;
+    --color-border: #444;
+    --font-serif: "HiraMinProN-W6", "Hiragino Mincho ProN", "Source Serif Pro", serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.ts-container {
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-serif);
+    padding: 40px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.ts-card {
+    border: 1px solid var(--color-border);
+    padding: 50px 30px;
+    background-color: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(2px);
+    max-width: 900px;
+    width: 80%;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* タイピングエリアのラッパー */
+.ts-typingDisplayWrapper {
+    position: relative;
+    width: 100%;
+    height: 100px;
+    margin-top: 40px;
+    border-top: 1px solid var(--color-border);
+    overflow: hidden;
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        black 20%,
+        black 80%,
+        transparent
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent,
+        black 20%,
+        black 80%,
+        transparent
+    );
+}
+
+/* 文字列のコンテナ */
+.ts-typingDisplayInner {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    font-size: 3rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.15em;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    display: flex;
+}
+
+.ts-typed {
+    color: #444444 !important;
+}
+
+.ts-untyped {
+    color: #ffffff !important;
+    opacity: 0.8;
+}
+
+.ts-target {
+    color: var(--color-accent) !important;
+    font-weight: bold;
+    position: relative;
+    text-shadow: 0 0 12px rgba(212, 184, 124, 0.5);
+}
+
+.ts-target::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    width: 100%;
+    height: 4px;
+    background-color: var(--color-accent);
+}
+
+/* タイトル・装飾 */
+.ts-title {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: 0.25em;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    background: linear-gradient(180deg, #fff 0%, #aaa 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.ts-subtitle {
+    font-size: 1.2rem;
+    color: var(--color-text-sub);
+    letter-spacing: 0.4em;
+    margin-bottom: 60px;
+}
+
+.ts-button {
+    background: none;
+    border: 1px solid var(--color-text-main);
+    color: var(--color-text-main);
+    padding: 18px 50px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    letter-spacing: 0.3em;
+}
+
+.ts-button:hover {
+    background-color: var(--color-text-main);
+    color: var(--color-bg);
+}
+
+.ts-progress {
+    position: absolute;
+    top: 30px;
+    font-size: 1.2rem;
+    color: var(--color-accent);
+    font-family: var(--font-mono);
+}
+
+.ts-kanjiWord {
+    font-size: 5.5rem;
+    margin-bottom: 20px;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+}
+
+.ts-yomi {
+    font-size: 1.5rem;
+    color: var(--color-text-sub);
+    margin-bottom: 50px;
+    letter-spacing: 0.2em;
+}
+
+/* リザルト画面 */
+.ts-resultStats {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin: 40px 0;
+}
+
+.ts-statItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ts-statLabel {
+    font-size: 1rem;
+    margin-bottom: 20px;
+    color: var(--color-text-sub);
+}
+
+.ts-statValue {
+    font-size: 3.5rem;
+    color: var(--color-accent);
+    font-family: var(--font-mono);
+    font-weight: bold;
+}
+
+.ts-resultListContainer {
+    text-align: center;
+}
+
+.ts-resultList {
+    display: inline-block;
+    text-align: left;
+    margin: 20px auto;
+}
+
+.ts-resultItem {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+}
+
+.ts-marker {
+    color: var(--color-accent);
+    margin-right: 15px;
+}
