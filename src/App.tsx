@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { seasonalData } from "./data";
 import type { MainData } from "./types";
+import { generateCandidates, matchInput } from "./Romantable";
 import "./App.css";
 
 export default function App() {
     const [state, setState] = useState<"start" | "playing" | "result">("start");
     const [questions, setQuestions] = useState<MainData[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [inputIndex, setInputIndex] = useState(0);
+    const [typed, setTyped] = useState(""); // 現在の単語で入力済みのローマ字
+    const [candidates, setCandidates] = useState<string[]>([]); // 現在の単語の全ローマ字候補
     const [missCount, setMissCount] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
     const [totalKeysPressed, setTotalKeysPressed] = useState(0);
@@ -25,13 +27,15 @@ export default function App() {
         }
     };
 
+
+    // タイピング表示の横スクロールオフセット計算
     useEffect(() => {
         if (typedRef.current) {
             setOffsetX(-typedRef.current.offsetWidth);
         } else {
             setOffsetX(0);
         }
-    }, [inputIndex, currentIndex]);
+    }, [typed, currentIndex]);
 
     const startGame = () => {
         clearTimer();
@@ -42,13 +46,17 @@ export default function App() {
         }
         setQuestions(shuffled);
         setCurrentIndex(0);
-        setInputIndex(0);
         setMissCount(0);
         setCorrectCount(0);
         setTotalKeysPressed(0);
         setTimeLeft(60);
         setPlayedHistory([shuffled[0]]);
         setState("playing");
+
+        // 最初の問題の候補を生成
+        const cands = generateCandidates(shuffled[0].reading);
+        setCandidates(cands);
+        setTyped("");
     };
 
     useEffect(() => {
@@ -71,66 +79,48 @@ export default function App() {
         (e: KeyboardEvent) => {
             if (state !== "playing" || e.key.length !== 1) return;
 
-            const q = questions[currentIndex];
-            const typingStr = q.typing;
-            const target = typingStr[inputIndex];
+            const newTyped = typed + e.key;
+            const { isValid, matched } = matchInput(newTyped, candidates);
 
-            let isCorrect = false;
-            let advance = 1;
-
-            if (e.key === target) isCorrect = true;
-            else if (
-                target === "h" &&
-                typingStr[inputIndex - 1] === "s" &&
-                e.key === typingStr[inputIndex + 1]
-            ) {
-                isCorrect = true;
-                advance = 2;
-            } else if (
-                target === "s" &&
-                typingStr[inputIndex - 1] === "t" &&
-                e.key === typingStr[inputIndex + 1]
-            ) {
-                isCorrect = true;
-                advance = 2;
-            } else if (
-                target === "h" &&
-                typingStr[inputIndex - 1] === "c" &&
-                e.key === typingStr[inputIndex + 1]
-            ) {
-                isCorrect = true;
-                advance = 2;
-            } else if (
-                target === "f" &&
-                e.key === "h" &&
-                typingStr[inputIndex + 1] === "u"
-            )
-                isCorrect = true;
-
-            if (isCorrect) {
-                setCorrectCount((c) => c + 1);
-                setTotalKeysPressed((t) => t + advance);
-
-                const nextIdx = inputIndex + advance;
-                if (nextIdx < typingStr.length) {
-                    setInputIndex(nextIdx);
-                } else {
-                    const nxt = (currentIndex + 1) % questions.length;
-                    setPlayedHistory((prev) => [...prev, questions[nxt]]);
-                    setCurrentIndex(nxt);
-                    setInputIndex(0);
-                }
-            } else {
+            if (!isValid) {
+                // ミス
                 setMissCount((m) => m + 1);
+                return;
+            }
+
+            // 正打
+            setCorrectCount((c) => c + 1);
+            setTotalKeysPressed((t) => t + 1);
+
+            if (matched !== null) {
+                // 単語クリア → 次の問題へ
+                const nxt = (currentIndex + 1) % questions.length;
+                setQuestions((prev) => {
+                    setPlayedHistory((hist) => [...hist, prev[nxt]]);
+                    return prev;
+                });
+                setCurrentIndex(nxt);
+                // 次の問題の候補を生成
+                const nextCands = generateCandidates(questions[nxt].reading);
+                setCandidates(nextCands);
+                setTyped("");
+            } else {
+                // 途中まで一致 → 入力を蓄積
+                setTyped(newTyped);
             }
         },
-        [state, questions, currentIndex, inputIndex],
+        [state, typed, candidates, currentIndex, questions],
     );
 
     useEffect(() => {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
+
+    // ---- 表示用：現在最も「進んでいる」候補を代表として選ぶ ----
+    // typed をプレフィックスとして持つ候補の中で最短のものを表示代表にする
+    const displayCandidate =
+        candidates.find((c) => c.startsWith(typed)) ?? candidates[0] ?? "";
 
     if (state === "start") {
         return (
@@ -152,6 +142,10 @@ export default function App() {
 
     if (state === "playing") {
         const q = questions[currentIndex];
+        const typedPart = displayCandidate.slice(0, typed.length);
+        const targetChar = displayCandidate.slice(typed.length, typed.length + 1);
+        const untypedPart = displayCandidate.slice(typed.length + 1);
+
         return (
             <div className="ts-container">
                 <div className="ts-progress">
@@ -161,21 +155,16 @@ export default function App() {
                     <div className="ts-kanjiWord">{q.word}</div>
                     <div className="ts-yomi">{q.reading}</div>
 
-                    {/* ★ インラインの style を削除し、元通りのクラス指定に戻します */}
                     <div className="ts-typingDisplayWrapper">
                         <div
                             className="ts-typingDisplayInner"
-                            style={{ transform: `translateX(${offsetX}px)` }} // 移動用のtransformだけ残す
+                            style={{ transform: `translateX(${offsetX}px)` }}
                         >
                             <span ref={typedRef} className="ts-typed">
-                                {q.typing.substring(0, inputIndex)}
+                                {typedPart}
                             </span>
-                            <span className="ts-target">
-                                {q.typing.substring(inputIndex, inputIndex + 1)}
-                            </span>
-                            <span className="ts-untyped">
-                                {q.typing.substring(inputIndex + 1)}
-                            </span>
+                            <span className="ts-target">{targetChar}</span>
+                            <span className="ts-untyped">{untypedPart}</span>
                         </div>
                     </div>
                 </div>
